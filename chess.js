@@ -35,19 +35,12 @@ let gameState = {};
 
 // --- Core Functions ---
 
-/**
- * Initializes the entire game.
- */
 function init() {
     console.log("Initializing game...");
     drawBoard();
-    // Defer reset to ensure DOM is ready after drawBoard.
     setTimeout(resetGame, 0);
 }
 
-/**
- * Resets the game to its initial state.
- */
 function resetGame() {
     console.log("Resetting game...");
     gameState = {
@@ -60,18 +53,12 @@ function resetGame() {
     showMessage("White's turn to move.");
 }
 
-/**
- * Creates the initial 8x8 board data structure from the setup object.
- * @returns {Array<Array<Object|null>>}
- */
 function initializeBoardState() {
     const board = Array(8).fill(null).map(() => Array(8).fill(null));
-
     for (const id in INITIAL_SETUP) {
         const [row, col] = idToCoords(id);
         const pieceStr = INITIAL_SETUP[id];
         const [colorStr, typeStr] = pieceStr.split('_');
-
         board[row][col] = {
             color: colorStr === 'w' ? COLORS.WHITE : COLORS.BLACK,
             type: PIECE_TYPES[typeStr.toUpperCase()]
@@ -80,9 +67,6 @@ function initializeBoardState() {
     return board;
 }
 
-/**
- * Draws the visual chessboard grid and attaches event listeners.
- */
 function drawBoard() {
     const container = document.getElementById('chessboard-container');
     if (!container) {
@@ -90,13 +74,11 @@ function drawBoard() {
         return;
     }
     container.innerHTML = '';
-
     for (let row = 0; row < 8; row++) {
         for (let col = 0; col < 8; col++) {
             const square = document.createElement('div');
             square.classList.add('square');
             square.id = coordsToId([row, col]);
-
             if ((row + col) % 2 === 0) {
                 square.classList.add('light');
             } else {
@@ -109,27 +91,20 @@ function drawBoard() {
     console.log("Chessboard drawn and event listener attached.");
 }
 
-/**
- * Renders the entire board UI based on the current gameState.
- */
 function renderBoard() {
     const { board, selectedSquare, lastMove } = gameState;
-
     document.querySelectorAll('.square').forEach(sq => {
         sq.innerHTML = '';
         sq.classList.remove('selected', 'last-move');
     });
-
     for (let row = 0; row < 8; row++) {
         for (let col = 0; col < 8; col++) {
             const piece = board[row][col];
             if (piece) {
-                const squareId = coordsToId([row, col]);
-                document.getElementById(squareId).innerHTML = UNICODE_PIECES[piece.color][piece.type];
+                document.getElementById(coordsToId([row, col])).innerHTML = UNICODE_PIECES[piece.color][piece.type];
             }
         }
     }
-
     if (selectedSquare) {
         document.getElementById(selectedSquare).classList.add('selected');
     }
@@ -144,7 +119,6 @@ function renderBoard() {
 function handleSquareClick(e) {
     const square = e.target.closest('.square');
     if (!square) return;
-
     const squareId = square.id;
     const [row, col] = idToCoords(squareId);
     const pieceOnSquare = gameState.board[row][col];
@@ -157,7 +131,6 @@ function handleSquareClick(e) {
             const fromId = gameState.selectedSquare;
             const [fromRow, fromCol] = idToCoords(fromId);
             const movingPiece = gameState.board[fromRow][fromCol];
-
             if (isValidMove(movingPiece, fromId, squareId)) {
                 movePiece(fromId, squareId);
             } else {
@@ -165,14 +138,12 @@ function handleSquareClick(e) {
                 gameState.selectedSquare = null;
             }
         }
-    } else {
-        if (pieceOnSquare) {
-            if (pieceOnSquare.color === gameState.currentPlayer) {
-                gameState.selectedSquare = squareId;
-                showMessage(`${gameState.currentPlayer}'s turn: Selected ${pieceOnSquare.type}.`);
-            } else {
-                showMessage(`Not your turn! It's ${gameState.currentPlayer}'s turn.`, true);
-            }
+    } else if (pieceOnSquare) {
+        if (pieceOnSquare.color === gameState.currentPlayer) {
+            gameState.selectedSquare = squareId;
+            showMessage(`Selected ${pieceOnSquare.color} ${pieceOnSquare.type}.`);
+        } else {
+            showMessage(`It's ${gameState.currentPlayer}'s turn. Cannot select a ${pieceOnSquare.color} piece.`, true);
         }
     }
     renderBoard();
@@ -183,17 +154,13 @@ function handleSquareClick(e) {
 function movePiece(fromId, toId) {
     const [fromRow, fromCol] = idToCoords(fromId);
     const [toRow, toCol] = idToCoords(toId);
-
     const piece = gameState.board[fromRow][fromCol];
     gameState.board[toRow][toCol] = piece;
     gameState.board[fromRow][fromCol] = null;
-
     gameState.lastMove = { from: fromId, to: toId };
     gameState.selectedSquare = null;
-
-    // Switch player
     gameState.currentPlayer = gameState.currentPlayer === COLORS.WHITE ? COLORS.BLACK : COLORS.WHITE;
-    showMessage(`${gameState.currentPlayer}'s turn to move.`);
+    showMessage(`Move successful! It is now ${gameState.currentPlayer}'s turn.`);
 }
 
 function isPathClear(fromId, toId) {
@@ -203,29 +170,20 @@ function isPathClear(fromId, toId) {
     const dCol = Math.sign(toCol - fromCol);
     let currentRow = fromRow + dRow;
     let currentCol = fromCol + dCol;
-
     while (currentRow !== toRow || currentCol !== toCol) {
-        if (gameState.board[currentRow][currentCol]) {
-            return false; // Path is blocked
-        }
+        if (gameState.board[currentRow][currentCol]) return false;
         currentRow += dRow;
         currentCol += dCol;
     }
-    return true; // Path is clear
+    return true;
 }
 
 function isValidMove(piece, fromId, toId) {
     if (!piece) return false;
-
     const [fromRow, fromCol] = idToCoords(fromId);
     const [toRow, toCol] = idToCoords(toId);
     const targetPiece = gameState.board[toRow][toCol];
-
-    // General rule: cannot capture your own piece
-    if (targetPiece && targetPiece.color === piece.color) {
-        return false;
-    }
-
+    if (targetPiece && targetPiece.color === piece.color) return false;
     const dRow = toRow - fromRow;
     const dCol = toCol - fromCol;
 
@@ -233,47 +191,20 @@ function isValidMove(piece, fromId, toId) {
         case PIECE_TYPES.PAWN:
             const forwardDir = piece.color === COLORS.WHITE ? -1 : 1;
             const startRow = piece.color === COLORS.WHITE ? 6 : 1;
-
-            // 1-square forward move
-            if (dCol === 0 && dRow === forwardDir && !targetPiece) {
-                return true;
-            }
-            // 2-square initial move
-            if (dCol === 0 && fromRow === startRow && dRow === 2 * forwardDir && !targetPiece) {
-                return isPathClear(fromId, toId);
-            }
-            // Diagonal capture
-            if (Math.abs(dCol) === 1 && dRow === forwardDir && targetPiece) {
-                return true;
-            }
+            if (dCol === 0 && dRow === forwardDir && !targetPiece) return true;
+            if (dCol === 0 && fromRow === startRow && dRow === 2 * forwardDir && !targetPiece) return isPathClear(fromId, toId);
+            if (Math.abs(dCol) === 1 && dRow === forwardDir && targetPiece) return true;
             return false;
-
         case PIECE_TYPES.KNIGHT:
-            // Knight jumps, so no path clearing needed.
             return (Math.abs(dRow) === 2 && Math.abs(dCol) === 1) || (Math.abs(dRow) === 1 && Math.abs(dCol) === 2);
-
         case PIECE_TYPES.ROOK:
-            if (dRow === 0 || dCol === 0) {
-                return isPathClear(fromId, toId);
-            }
-            return false;
-
+            return (dRow === 0 || dCol === 0) && isPathClear(fromId, toId);
         case PIECE_TYPES.BISHOP:
-            if (Math.abs(dRow) === Math.abs(dCol)) {
-                return isPathClear(fromId, toId);
-            }
-            return false;
-
+            return Math.abs(dRow) === Math.abs(dCol) && isPathClear(fromId, toId);
         case PIECE_TYPES.QUEEN:
-            if ((dRow === 0 || dCol === 0) || (Math.abs(dRow) === Math.abs(dCol))) {
-                return isPathClear(fromId, toId);
-            }
-            return false;
-
+            return ((dRow === 0 || dCol === 0) || (Math.abs(dRow) === Math.abs(dCol))) && isPathClear(fromId, toId);
         case PIECE_TYPES.KING:
-            // King cannot move into check, but for now, we'll just check the 1-square move.
             return Math.abs(dRow) <= 1 && Math.abs(dCol) <= 1;
-
         default:
             return false;
     }
