@@ -1,6 +1,6 @@
 #chessboard-container {
-    width: 400px;
-    height: 400px;
+    width: 480px; /* 60px * 8 */
+    height: 480px; /* 60px * 8 */
     display: grid;
     grid-template-columns: repeat(8, 1fr);
     grid-template-rows: repeat(8, 1fr);
@@ -10,6 +10,11 @@
 .square {
     width: 100%;
     height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 45px;
+    line-height: 1;
 }
 
 .light {
