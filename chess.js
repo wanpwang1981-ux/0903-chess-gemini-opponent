@@ -167,9 +167,12 @@ function handleSquareClick(e) {
         }
     } else {
         if (pieceOnSquare) {
-            // TODO: Check if it's the current player's piece
-            gameState.selectedSquare = squareId;
-            showMessage(`Selected ${pieceOnSquare.type}. Choose destination.`);
+            if (pieceOnSquare.color === gameState.currentPlayer) {
+                gameState.selectedSquare = squareId;
+                showMessage(`${gameState.currentPlayer}'s turn: Selected ${pieceOnSquare.type}.`);
+            } else {
+                showMessage(`Not your turn! It's ${gameState.currentPlayer}'s turn.`, true);
+            }
         }
     }
     renderBoard();
@@ -188,8 +191,27 @@ function movePiece(fromId, toId) {
     gameState.lastMove = { from: fromId, to: toId };
     gameState.selectedSquare = null;
 
-    // TODO: Switch player
-    showMessage(`Moved ${piece.type} from ${fromId} to ${toId}.`);
+    // Switch player
+    gameState.currentPlayer = gameState.currentPlayer === COLORS.WHITE ? COLORS.BLACK : COLORS.WHITE;
+    showMessage(`${gameState.currentPlayer}'s turn to move.`);
+}
+
+function isPathClear(fromId, toId) {
+    const [fromRow, fromCol] = idToCoords(fromId);
+    const [toRow, toCol] = idToCoords(toId);
+    const dRow = Math.sign(toRow - fromRow);
+    const dCol = Math.sign(toCol - fromCol);
+    let currentRow = fromRow + dRow;
+    let currentCol = fromCol + dCol;
+
+    while (currentRow !== toRow || currentCol !== toCol) {
+        if (gameState.board[currentRow][currentCol]) {
+            return false; // Path is blocked
+        }
+        currentRow += dRow;
+        currentCol += dCol;
+    }
+    return true; // Path is clear
 }
 
 function isValidMove(piece, fromId, toId) {
@@ -199,7 +221,10 @@ function isValidMove(piece, fromId, toId) {
     const [toRow, toCol] = idToCoords(toId);
     const targetPiece = gameState.board[toRow][toCol];
 
-    if (targetPiece && targetPiece.color === piece.color) return false;
+    // General rule: cannot capture your own piece
+    if (targetPiece && targetPiece.color === piece.color) {
+        return false;
+    }
 
     const dRow = toRow - fromRow;
     const dCol = toCol - fromCol;
@@ -207,28 +232,47 @@ function isValidMove(piece, fromId, toId) {
     switch (piece.type) {
         case PIECE_TYPES.PAWN:
             const forwardDir = piece.color === COLORS.WHITE ? -1 : 1;
-            if (dCol === 0 && dRow === forwardDir && !targetPiece) return true;
-            // TODO: Add 2-square initial move, en passant, and capture logic.
+            const startRow = piece.color === COLORS.WHITE ? 6 : 1;
+
+            // 1-square forward move
+            if (dCol === 0 && dRow === forwardDir && !targetPiece) {
+                return true;
+            }
+            // 2-square initial move
+            if (dCol === 0 && fromRow === startRow && dRow === 2 * forwardDir && !targetPiece) {
+                return isPathClear(fromId, toId);
+            }
+            // Diagonal capture
+            if (Math.abs(dCol) === 1 && dRow === forwardDir && targetPiece) {
+                return true;
+            }
             return false;
 
         case PIECE_TYPES.KNIGHT:
+            // Knight jumps, so no path clearing needed.
             return (Math.abs(dRow) === 2 && Math.abs(dCol) === 1) || (Math.abs(dRow) === 1 && Math.abs(dCol) === 2);
 
         case PIECE_TYPES.ROOK:
-            // TODO: Implement Rook move validation
+            if (dRow === 0 || dCol === 0) {
+                return isPathClear(fromId, toId);
+            }
             return false;
 
         case PIECE_TYPES.BISHOP:
-            // TODO: Implement Bishop move validation
+            if (Math.abs(dRow) === Math.abs(dCol)) {
+                return isPathClear(fromId, toId);
+            }
             return false;
 
         case PIECE_TYPES.QUEEN:
-            // TODO: Implement Queen move validation
+            if ((dRow === 0 || dCol === 0) || (Math.abs(dRow) === Math.abs(dCol))) {
+                return isPathClear(fromId, toId);
+            }
             return false;
 
         case PIECE_TYPES.KING:
-            // TODO: Implement King move validation
-            return false;
+            // King cannot move into check, but for now, we'll just check the 1-square move.
+            return Math.abs(dRow) <= 1 && Math.abs(dCol) <= 1;
 
         default:
             return false;
