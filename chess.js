@@ -48,6 +48,7 @@ function resetGame() {
         currentPlayer: COLORS.WHITE,
         selectedSquare: null,
         lastMove: null,
+        isGameOver: false,
     };
     renderBoard();
     showMessage("輪到白方下棋");
@@ -103,6 +104,10 @@ function renderBoard() {
 // --- Event Handling ---
 
 function handleSquareClick(e) {
+    if (gameState.isGameOver) {
+        showMessage("遊戲已結束。請點擊「重新開局」。", true);
+        return;
+    }
     const square = e.target.closest('.square');
     if (!square) return;
     const squareId = square.id;
@@ -137,16 +142,63 @@ function handleSquareClick(e) {
 // --- Game Logic ---
 
 function movePiece(fromId, toId) {
+    // Perform the move on the board
     const [fromRow, fromCol] = idToCoords(fromId);
     const [toRow, toCol] = idToCoords(toId);
     const piece = gameState.board[fromRow][fromCol];
     gameState.board[toRow][toCol] = piece;
     gameState.board[fromRow][fromCol] = null;
+
+    // Update basic game state
     gameState.lastMove = { from: fromId, to: toId };
     gameState.selectedSquare = null;
     gameState.currentPlayer = gameState.currentPlayer === COLORS.WHITE ? COLORS.BLACK : COLORS.WHITE;
-    const playerText = gameState.currentPlayer === 'white' ? '白方' : '黑方';
-    showMessage(`移動成功！輪到${playerText}下棋。`);
+
+    // Check for game end conditions
+    const opponentColor = gameState.currentPlayer;
+    const opponentKingId = findKing(opponentColor);
+    const isInCheck = isSquareUnderAttack(opponentKingId, piece.color, gameState.board);
+    const hasMoves = hasAnyValidMoves(opponentColor);
+
+    if (!hasMoves) {
+        gameState.isGameOver = true;
+        if (isInCheck) {
+            showMessage(`將死！ ${piece.color === 'white' ? '白方' : '黑方'}獲勝！`);
+        } else {
+            showMessage("逼和！遊戲平局。");
+        }
+    } else if (isInCheck) {
+        const playerText = opponentColor === 'white' ? '白方' : '黑方';
+        showMessage(`輪到${playerText}下棋，國王已被將軍！`);
+    } else {
+        const playerText = opponentColor === 'white' ? '白方' : '黑方';
+        showMessage(`移動成功！輪到${playerText}下棋。`);
+    }
+}
+
+function hasAnyValidMoves(playerColor) {
+    // Iterate over all squares on the board
+    for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+            const piece = gameState.board[r][c];
+
+            // If there's a piece and it's the player's color
+            if (piece && piece.color === playerColor) {
+                const fromId = coordsToId([r, c]);
+
+                // Check all 64 possible destination squares
+                for (let destR = 0; destR < 8; destR++) {
+                    for (let destC = 0; destC < 8; destC++) {
+                        const toId = coordsToId([destR, destC]);
+                        if (isValidMove(piece, fromId, toId)) {
+                            return true; // Found a valid move
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return false; // No valid moves found
 }
 
 // This is the new top-level validation function
@@ -162,17 +214,12 @@ function isValidMove(piece, fromId, toId) {
     boardCopy[toRow][toCol] = boardCopy[fromRow][fromCol];
     boardCopy[fromRow][fromCol] = null;
 
-    // Find the king of the current player
-    let kingSquareId = '';
-    for (let r = 0; r < 8; r++) {
-        for (let c = 0; c < 8; c++) {
-            const p = boardCopy[r][c];
-            if (p && p.type === PIECE_TYPES.KING && p.color === piece.color) {
-                kingSquareId = coordsToId([r, c]);
-                break;
-            }
-        }
-        if (kingSquareId) break;
+    // Find the king of the current player on the copied board
+    const kingSquareId = findKing(piece.color, boardCopy);
+    if (!kingSquareId) {
+        // This should not happen if the board is valid, but as a safeguard:
+        // If the king is somehow missing, the move is illegal.
+        return false;
     }
 
     // Check if the king is under attack after the move
@@ -246,6 +293,19 @@ function canPieceMove(piece, fromId, toId, board) {
 }
 
 // --- Helper Functions ---
+
+function findKing(playerColor, board) {
+    const aBoard = board || gameState.board;
+    for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+            const p = aBoard[r][c];
+            if (p && p.type === PIECE_TYPES.KING && p.color === playerColor) {
+                return coordsToId([r, c]);
+            }
+        }
+    }
+    return ''; // Should not happen
+}
 
 function idToCoords(id) {
     const col = id.charCodeAt(0) - 'a'.charCodeAt(0);
