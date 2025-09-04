@@ -50,7 +50,7 @@ function resetGame() {
         lastMove: null,
     };
     renderBoard();
-    showMessage("White's turn to move.");
+    showMessage("輪到白方下棋");
 }
 
 function initializeBoardState() {
@@ -126,7 +126,7 @@ function handleSquareClick(e) {
     if (gameState.selectedSquare) {
         if (squareId === gameState.selectedSquare) {
             gameState.selectedSquare = null;
-            showMessage("Selection cancelled.");
+            showMessage("取消選取");
         } else {
             const fromId = gameState.selectedSquare;
             const [fromRow, fromCol] = idToCoords(fromId);
@@ -134,16 +134,17 @@ function handleSquareClick(e) {
             if (isValidMove(movingPiece, fromId, squareId)) {
                 movePiece(fromId, squareId);
             } else {
-                showMessage("Invalid move.", true);
+                showMessage("不合法的移動", true);
                 gameState.selectedSquare = null;
             }
         }
     } else if (pieceOnSquare) {
         if (pieceOnSquare.color === gameState.currentPlayer) {
             gameState.selectedSquare = squareId;
-            showMessage(`Selected ${pieceOnSquare.color} ${pieceOnSquare.type}.`);
+                showMessage("選取棋子，請選擇目標位置");
         } else {
-            showMessage(`It's ${gameState.currentPlayer}'s turn. Cannot select a ${pieceOnSquare.color} piece.`, true);
+                const playerText = gameState.currentPlayer === 'white' ? '白方' : '黑方';
+                showMessage(`現在是${playerText}的回合，不能移動對方的棋子。`, true);
         }
     }
     renderBoard();
@@ -160,7 +161,8 @@ function movePiece(fromId, toId) {
     gameState.lastMove = { from: fromId, to: toId };
     gameState.selectedSquare = null;
     gameState.currentPlayer = gameState.currentPlayer === COLORS.WHITE ? COLORS.BLACK : COLORS.WHITE;
-    showMessage(`Move successful! It is now ${gameState.currentPlayer}'s turn.`);
+    const playerText = gameState.currentPlayer === 'white' ? '白方' : '黑方';
+    showMessage(`移動成功！輪到${playerText}下棋。`);
 }
 
 function isPathClear(fromId, toId) {
