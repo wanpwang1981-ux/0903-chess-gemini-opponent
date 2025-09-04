@@ -8,11 +8,5 @@
 function getAIMove(boardState) {
     // TODO: Connect to Gemini API to get the AI's move.
     console.log("AI is thinking...");
-
-    // Placeholder: return a random move for now
-    const moves = ['e4', 'd4', 'c4', 'Nf3'];
-    const randomMove = moves[Math.floor(Math.random() * moves.length)];
-
-    console.log(`AI chose move: ${randomMove}`);
-    return randomMove;
+    return null; // Placeholder
 }
