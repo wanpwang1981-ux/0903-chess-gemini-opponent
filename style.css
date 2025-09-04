@@ -10,6 +10,17 @@
     font-weight: bold;
 }
 
+#reset-button {
+    display: block;
+    margin: 0 auto 10px auto;
+    padding: 8px 16px;
+    font-size: 16px;
+    cursor: pointer;
+    background-color: #f0f0f0;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
 #chessboard-container {
     width: 480px; /* 60px * 8 */
     height: 480px; /* 60px * 8 */
