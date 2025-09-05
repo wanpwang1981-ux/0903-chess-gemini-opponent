@@ -49,6 +49,7 @@ function resetGame() {
         selectedSquare: null,
         lastMove: null,
         isGameOver: false,
+        availableMoves: [],
     };
     renderBoard();
     showMessage("輪到白方下棋");
@@ -81,10 +82,10 @@ function drawBoard() {
 }
 
 function renderBoard() {
-    const { board, selectedSquare, lastMove } = gameState;
+    const { board, selectedSquare, lastMove, availableMoves } = gameState;
     document.querySelectorAll('.square').forEach(sq => {
         sq.innerHTML = '';
-        sq.classList.remove('selected', 'last-move');
+        sq.classList.remove('selected', 'last-move', 'available-move');
     });
     for (let row = 0; row < 8; row++) {
         for (let col = 0; col < 8; col++) {
@@ -98,6 +99,11 @@ function renderBoard() {
     if (lastMove) {
         document.getElementById(lastMove.from).classList.add('last-move');
         document.getElementById(lastMove.to).classList.add('last-move');
+    }
+    if (availableMoves.length > 0) {
+        availableMoves.forEach(moveId => {
+            document.getElementById(moveId).classList.add('available-move');
+        });
     }
 }
 
@@ -116,6 +122,7 @@ function handleSquareClick(e) {
     if (gameState.selectedSquare) {
         if (squareId === gameState.selectedSquare) {
             gameState.selectedSquare = null;
+            gameState.availableMoves = [];
             showMessage("取消選取");
         } else {
             const fromId = gameState.selectedSquare;
@@ -125,11 +132,13 @@ function handleSquareClick(e) {
             } else {
                 showMessage("不合法的移動", true);
                 gameState.selectedSquare = null;
+                gameState.availableMoves = [];
             }
         }
     } else if (pieceOnSquare) {
         if (pieceOnSquare.color === gameState.currentPlayer) {
             gameState.selectedSquare = squareId;
+            gameState.availableMoves = getAvailableMoves(squareId);
             showMessage("選取棋子，請選擇目標位置");
         } else {
             const playerText = gameState.currentPlayer === 'white' ? '白方' : '黑方';
@@ -152,6 +161,7 @@ function movePiece(fromId, toId) {
     // Update basic game state
     gameState.lastMove = { from: fromId, to: toId };
     gameState.selectedSquare = null;
+    gameState.availableMoves = [];
     gameState.currentPlayer = gameState.currentPlayer === COLORS.WHITE ? COLORS.BLACK : COLORS.WHITE;
 
     // Check for game end conditions
@@ -199,6 +209,22 @@ function hasAnyValidMoves(playerColor) {
         }
     }
     return false; // No valid moves found
+}
+
+function getAvailableMoves(fromId) {
+    const availableMoves = [];
+    const piece = getPieceAtId(fromId);
+    if (!piece) return availableMoves;
+
+    for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+            const toId = coordsToId([r, c]);
+            if (isValidMove(piece, fromId, toId)) {
+                availableMoves.push(toId);
+            }
+        }
+    }
+    return availableMoves;
 }
 
 // This is the new top-level validation function
