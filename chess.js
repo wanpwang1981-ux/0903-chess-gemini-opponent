@@ -154,8 +154,7 @@ function movePiece(fromId, toId) {
     // Perform the move on the board
     const [fromRow, fromCol] = idToCoords(fromId);
     const [toRow, toCol] = idToCoords(toId);
-    const piece = gameState.board[fromRow][fromCol];
-    gameState.board[toRow][toCol] = piece;
+    gameState.board[toRow][toCol] = gameState.board[fromRow][fromCol];
     gameState.board[fromRow][fromCol] = null;
 
     // Update basic game state
@@ -164,25 +163,38 @@ function movePiece(fromId, toId) {
     gameState.availableMoves = [];
     gameState.currentPlayer = gameState.currentPlayer === COLORS.WHITE ? COLORS.BLACK : COLORS.WHITE;
 
-    // Check for game end conditions
-    const opponentColor = gameState.currentPlayer;
-    const opponentKingId = findKing(opponentColor);
-    const isInCheck = isSquareUnderAttack(opponentKingId, piece.color, gameState.board);
-    const hasMoves = hasAnyValidMoves(opponentColor);
+    // Check game status for the new player
+    updateGameStatus();
+}
+
+function updateGameStatus() {
+    const player = gameState.currentPlayer;
+    const opponent = player === COLORS.WHITE ? COLORS.BLACK : COLORS.WHITE;
+
+    const kingId = findKing(player);
+    if (!kingId) {
+        gameState.isGameOver = true;
+        showMessage("錯誤：找不到國王！", true);
+        return;
+    }
+
+    const isInCheck = isSquareUnderAttack(kingId, opponent, gameState.board);
+    const hasMoves = hasAnyValidMoves(player);
 
     if (!hasMoves) {
         gameState.isGameOver = true;
         if (isInCheck) {
-            showMessage(`將死！ ${piece.color === 'white' ? '白方' : '黑方'}獲勝！`);
+            const winnerText = opponent === 'white' ? '白方' : '黑方';
+            showMessage(`將死！ ${winnerText}獲勝！`, true);
         } else {
-            showMessage("逼和！遊戲平局。");
+            showMessage("逼和！遊戲平局。", true);
         }
     } else if (isInCheck) {
-        const playerText = opponentColor === 'white' ? '白方' : '黑方';
+        const playerText = player === 'white' ? '白方' : '黑方';
         showMessage(`輪到${playerText}下棋，國王已被將軍！`);
     } else {
-        const playerText = opponentColor === 'white' ? '白方' : '黑方';
-        showMessage(`移動成功！輪到${playerText}下棋。`);
+        const playerText = player === 'white' ? '白方' : '黑方';
+        showMessage(`輪到${playerText}下棋。`);
     }
 }
 
