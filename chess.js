@@ -206,13 +206,16 @@ function triggerAIMove() {
 
     // Use setTimeout to simulate a delay for the AI's "thinking" time
     setTimeout(() => {
-        const aiMove = getAIMove(gameState.board, gameState.difficulty);
+        const aiMoveString = getAIMove(gameState, isValidMove, coordsToId);
 
-        if (aiMove) {
-            // In a real implementation, we would parse this move and apply it.
-            console.log(`AI suggests move: ${aiMove}`);
+        if (aiMoveString) {
+            const [fromId, toId] = aiMoveString.split('-');
+            console.log(`AI moves from ${fromId} to ${toId}`);
+            movePiece(fromId, toId);
+            renderBoard(); // Re-render the board after AI move
         } else {
-            console.log("AI did not return a move (as expected for now).");
+            // This case is handled by updateGameStatus, but we log it as a fallback.
+            console.log("AI has no available moves.");
         }
     }, 500);
 }

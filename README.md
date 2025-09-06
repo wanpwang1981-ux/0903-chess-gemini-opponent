@@ -19,4 +19,5 @@ This is a simple chess game built with HTML, CSS, and JavaScript. The goal is to
 -   **視覺化棋盤 (Visual Board):** 一個用 HTML/CSS 繪製的 8x8 棋盤。
 -   **模組化程式碼 (Modular Code):** 將遊戲邏輯 (`chess.js`) 與 AI 邏輯 (`ai.js`) 分離，方便維護與擴充。
 -   **AI 整合佔位 (AI Placeholder):** 已預留 `getAIMove()` 函式，為未來串接 AI 模型做好準備。
+-   **AI 難度選擇 (AI Difficulty Selector):** 遊戲介面提供三種 AI 難度（簡單、一般、超難），允許玩家根據自己的水平選擇對手。 (The game interface provides three AI difficulty levels (Easy, Normal, Hard), allowing the player to choose an opponent based on their skill level.)
 -   **靜態網站 friendly (Static Site Friendly):** 整個專案由純靜態檔案組成，可直接在任何網頁伺服器或 GitHub Pages 上運行。
