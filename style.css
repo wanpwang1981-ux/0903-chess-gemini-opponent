@@ -70,3 +70,12 @@
     top: 50%;
     left: 50%;
 }
+
+#version-info {
+    position: fixed;
+    bottom: 5px;
+    right: 5px;
+    font-size: 12px;
+    color: #888;
+    font-family: monospace;
+}

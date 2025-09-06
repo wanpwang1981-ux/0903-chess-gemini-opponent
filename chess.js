@@ -20,10 +20,10 @@ const MOVE_VALIDATION_RESULTS = {
 };
 
 const ERROR_MESSAGES = {
-    [MOVE_VALIDATION_RESULTS.INVALID_PIECE_MOVE.reason]: "這個棋子不能這樣走。",
-    [MOVE_VALIDATION_RESULTS.PATH_BLOCKED.reason]: "路徑被其他棋子擋住了。",
-    [MOVE_VALIDATION_RESULTS.MOVE_EXPOSES_KING_TO_CHECK.reason]: "這個移動會讓您的國王陷入危險。",
-    [MOVE_VALIDATION_RESULTS.INVALID_STATE_NO_KING.reason]: "發生內部錯誤：找不到國王。",
+    'INVALID_PIECE_MOVE': "這個棋子不能這樣走。",
+    'PATH_BLOCKED': "路徑被其他棋子擋住了。",
+    'MOVE_EXPOSES_KING_TO_CHECK': "這個移動會讓您的國王陷入危險。",
+    'INVALID_STATE_NO_KING': "發生內部錯誤：找不到國王。",
 };
 
 const UNICODE_PIECES = {
