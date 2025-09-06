@@ -46,7 +46,16 @@ function init() {
 }
 
 function resetGame() {
-    gameState = { board: initializeBoardState(), currentPlayer: COLORS.WHITE, selectedSquare: null, lastMove: null, isGameOver: false, availableMoves: [] };
+    const selectedDifficulty = document.querySelector('input[name="difficulty"]:checked')?.value || 'hard';
+    gameState = {
+        board: initializeBoardState(),
+        currentPlayer: COLORS.WHITE,
+        selectedSquare: null,
+        lastMove: null,
+        isGameOver: false,
+        availableMoves: [],
+        difficulty: selectedDifficulty,
+    };
     renderBoard();
     showMessage("輪到白方下棋");
 }
@@ -160,14 +169,17 @@ function movePiece(fromId, toId) {
 function updateGameStatus() {
     const player = gameState.currentPlayer;
     const opponent = player === COLORS.WHITE ? COLORS.BLACK : COLORS.WHITE;
+
     const kingId = findKing(player);
     if (!kingId) {
         gameState.isGameOver = true;
         showMessage("錯誤：找不到國王！", true);
         return;
     }
+
     const isInCheck = isSquareUnderAttack(kingId, opponent, gameState.board);
     const hasMoves = hasAnyValidMoves(player);
+
     if (!hasMoves) {
         gameState.isGameOver = true;
         if (isInCheck) {
@@ -179,10 +191,30 @@ function updateGameStatus() {
     } else if (isInCheck) {
         const playerText = player === 'white' ? '白方' : '黑方';
         showMessage(`輪到${playerText}下棋，國王已被將軍！`);
+        if (player === COLORS.BLACK) triggerAIMove();
     } else {
         const playerText = player === 'white' ? '白方' : '黑方';
         showMessage(`輪到${playerText}下棋。`);
+        if (player === COLORS.BLACK) triggerAIMove();
     }
+}
+
+function triggerAIMove() {
+    if (gameState.isGameOver) return;
+
+    showMessage("AI 正在思考...");
+
+    // Use setTimeout to simulate a delay for the AI's "thinking" time
+    setTimeout(() => {
+        const aiMove = getAIMove(gameState.board, gameState.difficulty);
+
+        if (aiMove) {
+            // In a real implementation, we would parse this move and apply it.
+            console.log(`AI suggests move: ${aiMove}`);
+        } else {
+            console.log("AI did not return a move (as expected for now).");
+        }
+    }, 500);
 }
 
 function hasAnyValidMoves(playerColor) {

@@ -10,9 +10,15 @@
     font-weight: bold;
 }
 
-#reset-button {
-    display: block;
+#game-controls {
+    width: 480px;
     margin: 0 auto 10px auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+#reset-button {
     padding: 8px 16px;
     font-size: 16px;
     cursor: pointer;
@@ -78,4 +84,17 @@
     font-size: 12px;
     color: #888;
     font-family: monospace;
+}
+
+#difficulty-selector {
+    font-size: 16px;
+}
+
+#difficulty-selector label {
+    margin: 0 5px 0 2px;
+    cursor: pointer;
+}
+
+#difficulty-selector input {
+    cursor: pointer;
 }

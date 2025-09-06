@@ -8,7 +8,18 @@
 </head>
 <body>
     <h1>Chess Game</h1>
-    <button id="reset-button">重新開局</button>
+    <div id="game-controls">
+        <button id="reset-button">重新開局</button>
+        <div id="difficulty-selector">
+            <span>難度:</span>
+            <input type="radio" id="diff-easy" name="difficulty" value="easy">
+            <label for="diff-easy">簡單</label>
+            <input type="radio" id="diff-normal" name="difficulty" value="normal">
+            <label for="diff-normal">一般</label>
+            <input type="radio" id="diff-hard" name="difficulty" value="hard" checked>
+            <label for="diff-hard">超難</label>
+        </div>
+    </div>
     <div id="message-area"></div>
     <div id="chessboard-container"></div>
 
