@@ -171,7 +171,7 @@ function handleSquareClick(e) {
 
 function selectPiece(r, c) {
     gameState.selectedSquare = { r, c };
-    gameState.availableMoves = getAvailableMoves(r, c);
+    gameState.availableMoves = getAvailableMoves(r, c, gameState.board);
 }
 
 function flipPiece(r, c) {
@@ -244,8 +244,8 @@ async function triggerAIMove() {
 
 
 // --- Rule Logic ---
-function getAvailableMoves(r, c) {
-    const piece = gameState.board[r][c];
+function getAvailableMoves(r, c, board) {
+    const piece = board[r][c];
     if (!piece || piece.isHidden) return [];
 
     const moves = [];
@@ -257,7 +257,7 @@ function getAvailableMoves(r, c) {
         const newR = r + delta.r;
         const newC = c + delta.c;
         if (isValidSquare(newR, newC)) {
-            const target = gameState.board[newR][newC];
+            const target = board[newR][newC];
             if (!target) { // Move to empty square
                 moves.push({ r: newR, c: newC });
             } else if (canCapture(piece, target)) { // Capture
@@ -270,20 +270,20 @@ function getAvailableMoves(r, c) {
     if (isCannon) {
         // Horizontal
         for (let col = 0; col < COLS; col++) {
-            if(col !== c) addCannonMove(r, c, r, col, moves);
+            if(col !== c) addCannonMove(r, c, r, col, moves, board);
         }
         // Vertical
         for (let row = 0; row < ROWS; row++) {
-            if(row !== r) addCannonMove(r, c, row, c, moves);
+            if(row !== r) addCannonMove(r, c, row, c, moves, board);
         }
     }
 
     return moves;
 }
 
-function addCannonMove(r1, c1, r2, c2, moves) {
-    const piece = gameState.board[r1][c1];
-    const target = gameState.board[r2][c2];
+function addCannonMove(r1, c1, r2, c2, moves, board) {
+    const piece = board[r1][c1];
+    const target = board[r2][c2];
     if (!target || target.color === piece.color) return;
 
     let jumpOverCount = 0;
@@ -291,13 +291,13 @@ function addCannonMove(r1, c1, r2, c2, moves) {
         const start = Math.min(c1, c2) + 1;
         const end = Math.max(c1, c2);
         for (let i = start; i < end; i++) {
-            if (gameState.board[r1][i]) jumpOverCount++;
+            if (board[r1][i]) jumpOverCount++;
         }
     } else { // Vertical
         const start = Math.min(r1, r2) + 1;
         const end = Math.max(r1, r2);
         for (let i = start; i < end; i++) {
-            if (gameState.board[i][c1]) jumpOverCount++;
+            if (board[i][c1]) jumpOverCount++;
         }
     }
 
@@ -325,8 +325,8 @@ function canCapture(attacker, defender) {
 
 // --- Game Over Logic ---
 function checkGameOver() {
-    const redHasMoves = hasAnyValidMoves(COLORS.RED);
-    const blackHasMoves = hasAnyValidMoves(COLORS.BLACK);
+    const redHasMoves = hasAnyValidMoves(COLORS.RED, gameState.board);
+    const blackHasMoves = hasAnyValidMoves(COLORS.BLACK, gameState.board);
 
     if (!redHasMoves && gameState.currentPlayer === COLORS.RED) {
         endGame(COLORS.BLACK, "紅方已無棋可走");
@@ -338,19 +338,19 @@ function checkGameOver() {
     }
 }
 
-function hasAnyValidMoves(color) {
+function hasAnyValidMoves(color, board) {
     // Check for any possible flips
     for (let r = 0; r < ROWS; r++) {
         for (let c = 0; c < COLS; c++) {
-            if (gameState.board[r][c] && gameState.board[r][c].isHidden) {
+            if (board[r][c] && board[r][c].isHidden) {
                 return true;
             }
         }
     }
     // Check for any possible moves
-    const pieces = getPlayerPieces(color);
+    const pieces = getPlayerPieces(color); // This function still uses global state, but it's okay for now as it's only for getting piece locations.
     for (const piece of pieces) {
-        if (getAvailableMoves(piece.r, piece.c).length > 0) {
+        if (getAvailableMoves(piece.r, piece.c, board).length > 0) {
             return true;
         }
     }
