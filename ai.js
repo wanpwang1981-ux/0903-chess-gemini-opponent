@@ -1,41 +1,55 @@
-/**
- * Gets a move from the AI.
- * This function can be extended to call the Gemini API.
- * For now, it implements a simple random-move AI as a fallback.
- *
- * @param {object} gameState - The entire current game state.
- * @returns {Promise<object|null>} A promise that resolves to the AI's move { from, to } or null if no moves are available.
- */
-async function getAIMove(gameState) {
-    // TODO: Connect to Gemini API to get the AI's move.
-    console.log("AI is thinking...");
+// --- AI LOGIC ---
 
-    // Simulate network delay for a more realistic feel
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    // --- Fallback AI: Random Mover ---
+function getAIMove(gameState) {
+    const allPossibleMoves = [];
     const aiColor = gameState.currentPlayer;
-    const allMoves = [];
+    const board = gameState.board;
+    const ROWS = 8;
+    const COLS = 4;
 
-    // Find all possible moves for the AI
-    for (let r = 0; r < 8; r++) {
-        for (let c = 0; c < 8; c++) {
-            const piece = gameState.board[r][c];
-            if (piece && piece.color === aiColor) {
-                const fromId = coordsToId([r, c]);
-                const availableMoves = getAvailableMoves(fromId); // Assuming getAvailableMoves is globally available from chess.js
-                if (availableMoves.length > 0) {
-                    availableMoves.forEach(toId => {
-                        allMoves.push({ from: fromId, to: toId });
-                    });
+    // 1. Find all possible moves (flip, move, capture)
+    for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+            const piece = board[r][c];
+            if (piece) {
+                if (piece.isHidden) {
+                    // Type 1: Flip a hidden piece
+                    allPossibleMoves.push({ type: 'flip', r, c });
+                } else if (piece.color === aiColor) {
+                    // Type 2: Move or capture with one of our pieces.
+                    // CALL THE AUTHORITATIVE FUNCTION FROM CHESS.JS
+                    const available = getAvailableMoves(r, c, board);
+                    for (const move of available) {
+                        allPossibleMoves.push({ type: 'move', from: { r, c }, to: { r: move.r, c: move.c } });
+                    }
                 }
             }
         }
     }
 
-    if (allMoves.length === 0) return null; // No legal moves
+    // 2. If there are no moves, return null
+    if (allPossibleMoves.length === 0) {
+        return null;
+    }
 
-    const randomMove = allMoves[Math.floor(Math.random() * allMoves.length)];
-    console.log(`AI chose move: ${randomMove.from} to ${randomMove.to}`);
+    // 3. Choose a random move from the list
+    const randomMove = allPossibleMoves[Math.floor(Math.random() * allPossibleMoves.length)];
+
+    // --- Basic Strategy ---
+    // If a capture is possible, prefer it over other moves.
+    const captureMoves = allPossibleMoves.filter(move => {
+        if (move.type !== 'move') return false;
+        const targetPiece = board[move.to.r][move.to.c];
+        // A move is a capture if the target square is not empty.
+        // The getAvailableMoves function already guarantees it's a valid capture.
+        return !!targetPiece;
+    });
+
+    if (captureMoves.length > 0) {
+        // Choose a random capture move
+        return captureMoves[Math.floor(Math.random() * captureMoves.length)];
+    }
+
+    // Otherwise, return the previously selected random move
     return randomMove;
 }
