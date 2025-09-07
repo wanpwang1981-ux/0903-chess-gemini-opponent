@@ -1,68 +1,122 @@
 /* --- CSS Variables --- */
 :root {
-    --board-size: min(480px, 90vw); /* Board size is responsive, max 480px */
-    --light-square-bg: #f0d9b5;
-    --dark-square-bg: #b58863;
-    --selected-color: #3498db;
-    --last-move-color: rgba(255, 255, 0, 0.4);
-    --available-move-color: rgba(0, 0, 0, 0.25);
+    --board-width: min(400px, 95vw);
+    /* The board is 4x8, so height is 2 * width */
+    --board-height: calc(var(--board-width) * 2);
+    --square-bg: #e0b88a;
+    --board-border-color: #6a4f2b;
+    --selected-color: rgba(52, 152, 219, 0.8);
+    --available-move-color: rgba(46, 204, 113, 0.7);
     --text-color: #2c3e50;
-    --error-color: #c0392b;
+    --red-piece-color: #c0392b;
+    --black-piece-color: #2c3e50;
+    --hidden-piece-bg: #a98d66;
+    --hidden-piece-border: #6a4f2b;
 }
 
 /* --- General Layout --- */
 body {
-    font-family: sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     display: flex;
     justify-content: center;
     align-items: center;
     min-height: 100vh;
     margin: 0;
-    background-color: #ecf0f1;
+    background-color: #f7f1e3;
+    color: var(--text-color);
 }
 
 main {
     display: flex;
     flex-direction: column;
     align-items: center;
+    padding: 10px;
 }
 
-/* --- UI Elements --- */
-#message-area {
-    height: 30px;
-    width: var(--board-size);
-    margin-bottom: 10px;
+.hidden {
+    display: none !important;
+}
+
+/* --- Mode Selection Screen --- */
+#mode-selection {
+    text-align: center;
+}
+
+#mode-selection h1 {
+    font-size: 2.5em;
+    margin-bottom: 30px;
+}
+
+.menu-buttons button {
+    font-size: 1.2em;
+    padding: 15px 30px;
+    margin: 10px;
+    cursor: pointer;
+    border-radius: 8px;
+    border: 2px solid var(--board-border-color);
+    background-color: var(--square-bg);
+    transition: background-color 0.2s;
+}
+
+.menu-buttons button:hover {
+    background-color: #d3a979;
+}
+
+/* --- Game Container --- */
+#game-container {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: center;
-    font-size: 16px;
-    color: var(--text-color);
-    font-weight: bold;
 }
 
-#reset-button {
-    display: block;
-    margin: 0 auto 10px auto;
-    padding: 8px 16px;
-    font-size: 16px;
+header {
+    width: var(--board-width);
+    margin-bottom: 10px;
+}
+
+.game-controls {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.game-controls button {
+    padding: 8px 12px;
+    font-size: 14px;
     cursor: pointer;
     background-color: #f0f0f0;
     border: 1px solid #ccc;
     border-radius: 4px;
 }
-#reset-button:hover {
+
+.game-controls button:hover {
     background-color: #e0e0e0;
-    border-color: #bbb;
+}
+
+#message-area {
+    height: 30px;
+    width: var(--board-width);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: bold;
+    text-align: center;
 }
 
 /* --- Chessboard --- */
 #chessboard-container {
-    width: var(--board-size);
-    height: var(--board-size);
+    width: var(--board-width);
+    height: var(--board-height);
     display: grid;
-    grid-template-columns: repeat(8, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     grid-template-rows: repeat(8, 1fr);
-    border: 2px solid #333;
+    border: 3px solid var(--board-border-color);
+    background-color: var(--square-bg);
+    gap: 2px; /* Creates the lines */
+    padding: 2px;
+    box-sizing: border-box;
 }
 
 .square {
@@ -71,42 +125,106 @@ main {
     display: flex;
     justify-content: center;
     align-items: center;
-    font-size: 45px;
-    line-height: 1;
-    cursor: pointer; /* Indicate squares are clickable */
-    position: relative; /* For pseudo-element positioning */
-}
-.square:hover {
-    background-color: #c8d6e5; /* Light blue hover effect */
+    cursor: pointer;
+    position: relative;
 }
 
-/* --- Square States --- */
-.light { background-color: var(--light-square-bg); }
-.dark { background-color: var(--dark-square-bg); }
-
-.selected {
-    outline: 3px solid var(--selected-color); /* Blue outline for selected piece */
-    outline-offset: -3px;
+/* --- Piece Styles --- */
+.piece {
+    width: 85%;
+    height: 85%;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: clamp(20px, 6vw, 32px); /* Responsive font size */
+    font-weight: bold;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    transition: background-color 0.4s, color 0.4s, border-color 0.4s, transform 0.2s ease-out;
 }
 
-.last-move {
-    background-color: var(--last-move-color); /* Transparent yellow background */
+.piece:hover {
+    transform: translateY(-2px) scale(1.02);
 }
 
-/* Re-apply hover effect if it's also a last-move square */
-.last-move:hover {
-    background-color: #c8d6e5;
+.piece.hidden-piece {
+    background-color: var(--hidden-piece-bg);
+    border: 3px solid var(--hidden-piece-border);
 }
 
+.piece.red {
+    background-color: white;
+    color: var(--red-piece-color);
+    border: 3px solid var(--red-piece-color);
+}
 
-.available-move::after {
+.piece.black {
+    background-color: white;
+    color: var(--black-piece-color);
+    border: 3px solid var(--black-piece-color);
+}
+
+.square.selected .piece {
+    transform: scale(1.1);
+    box-shadow: 0 0 15px var(--selected-color);
+}
+
+.square.available-move::after {
     content: '';
     position: absolute;
-    width: 25px;
-    height: 25px;
+    width: 30%;
+    height: 30%;
     background: var(--available-move-color);
     border-radius: 50%;
-    transform: translate(-50%, -50%);
-    top: 50%;
-    left: 50%;
+}
+
+/* --- Captured Pieces Area --- */
+#captured-pieces-area {
+    width: var(--board-width);
+    margin-top: 15px;
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.captured-box {
+    width: 48%;
+    min-height: 50px;
+    background: #fdfdfd;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 5px;
+}
+
+.capture-title {
+    font-weight: bold;
+    font-size: 14px;
+    margin-bottom: 5px;
+    display: block;
+}
+
+.captured-pieces {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+}
+
+.captured-pieces .piece {
+    width: 28px;
+    height: 28px;
+    font-size: 18px;
+    box-shadow: none;
+    border-width: 2px;
+}
+
+/* --- Responsive Design --- */
+@media (max-width: 420px) {
+    #captured-pieces-area {
+        flex-direction: column;
+        gap: 5px;
+    }
+    .captured-box {
+        width: 100%;
+        box-sizing: border-box; /* Ensure padding doesn't cause overflow */
+    }
 }

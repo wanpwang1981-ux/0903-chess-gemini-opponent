@@ -3,20 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HTML Chess Game</title>
+    <title>中國暗棋</title>
     <link rel="stylesheet" href="style.css">
     <script src="chess.js" defer></script>
     <script src="ai.js" defer></script>
 </head>
 <body>
     <main>
-        <header>
-            <h1>Chess Game</h1>
-            <button id="reset-button">重新開局</button>
-        </header>
-        <div id="message-area"></div>
-        <div id="chessboard-container"></div>
-    </main>
+        <!-- Mode Selection Screen -->
+        <div id="mode-selection">
+            <h1>中國暗棋</h1>
+            <div class="menu-buttons">
+                <button id="pvc-button">對戰電腦</button>
+                <button id="pvp-button">雙人對戰</button>
+            </div>
+        </div>
 
+        <!-- Main Game Screen (Initially Hidden) -->
+        <div id="game-container" class="hidden">
+            <header>
+                <div class="game-controls">
+                    <button id="reset-button">重新開局</button>
+                    <button id="back-to-menu-button">返回主選單</button>
+                </div>
+            </header>
+            <div id="message-area"></div>
+            <div id="chessboard-container"></div>
+            <div id="captured-pieces-area">
+                <div class="captured-box" id="red-captured-box">
+                    <span class="capture-title">紅方戰利品:</span>
+                    <div id="red-captured" class="captured-pieces"></div>
+                </div>
+                <div class="captured-box" id="black-captured-box">
+                    <span class="capture-title">黑方戰利品:</span>
+                    <div id="black-captured" class="captured-pieces"></div>
+                </div>
+            </div>
+        </div>
+    </main>
 </body>
 </html>

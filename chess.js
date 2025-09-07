@@ -1,373 +1,402 @@
-document.addEventListener('DOMContentLoaded', () => {
-    init();
-
-    const resetButton = document.getElementById('reset-button');
-    if (resetButton) {
-        resetButton.addEventListener('click', resetGame);
-    }
-});
+document.addEventListener('DOMContentLoaded', init);
 
 // --- Constants ---
-const PIECE_TYPES = { PAWN: 'pawn', KNIGHT: 'knight', BISHOP: 'bishop', ROOK: 'rook', QUEEN: 'queen', KING: 'king' };
-const COLORS = { WHITE: 'white', BLACK: 'black' };
-
-const MOVE_VALIDATION_RESULTS = {
-    VALID: { isValid: true, reason: null },
-    INVALID_PIECE_MOVE: { isValid: false, reason: 'INVALID_PIECE_MOVE' },
-    PATH_BLOCKED: { isValid: false, reason: 'PATH_BLOCKED' },
-    MOVE_EXPOSES_KING_TO_CHECK: { isValid: false, reason: 'MOVE_EXPOSES_KING_TO_CHECK' },
-    INVALID_STATE_NO_KING: { isValid: false, reason: 'INVALID_STATE_NO_KING' },
+const COLORS = { RED: 'red', BLACK: 'black' };
+const PIECES = {
+    '帥': { color: COLORS.RED, rank: 7, name: '帥' }, '將': { color: COLORS.BLACK, rank: 7, name: '將' },
+    '仕': { color: COLORS.RED, rank: 6, name: '仕' }, '士': { color: COLORS.BLACK, rank: 6, name: '士' },
+    '相': { color: COLORS.RED, rank: 5, name: '相' }, '象': { color: COLORS.BLACK, rank: 5, name: '象' },
+    '俥': { color: COLORS.RED, rank: 4, name: '俥' }, '車': { color: COLORS.BLACK, rank: 4, name: '車' },
+    '傌': { color: COLORS.RED, rank: 3, name: '傌' }, '馬': { color: COLORS.BLACK, rank: 3, name: '馬' },
+    '炮': { color: COLORS.RED, rank: 2, name: '炮' }, '包': { color: COLORS.BLACK, rank: 2, name: '包' },
+    '兵': { color: COLORS.RED, rank: 1, name: '兵' }, '卒': { color: COLORS.BLACK, rank: 1, name: '卒' },
 };
 
-const ERROR_MESSAGES = {
-    [MOVE_VALIDATION_RESULTS.INVALID_PIECE_MOVE.reason]: "這個棋子不能這樣走。",
-    [MOVE_VALIDATION_RESULTS.PATH_BLOCKED.reason]: "路徑被其他棋子擋住了。",
-    [MOVE_VALIDATION_RESULTS.MOVE_EXPOSES_KING_TO_CHECK.reason]: "這個移動會讓您的國王陷入危險。",
-    [MOVE_VALIDATION_RESULTS.INVALID_STATE_NO_KING.reason]: "發生內部錯誤：找不到國王。",
-};
+const INITIAL_PIECE_POOL = [
+    ...Array(1).fill('帥'), ...Array(2).fill('仕'), ...Array(2).fill('相'), ...Array(2).fill('俥'), ...Array(2).fill('傌'), ...Array(2).fill('炮'), ...Array(5).fill('兵'),
+    ...Array(1).fill('將'), ...Array(2).fill('士'), ...Array(2).fill('象'), ...Array(2).fill('車'), ...Array(2).fill('馬'), ...Array(2).fill('包'), ...Array(5).fill('卒'),
+];
 
-const UNICODE_PIECES = {
-    [COLORS.WHITE]: { [PIECE_TYPES.KING]: '♔', [PIECE_TYPES.QUEEN]: '♕', [PIECE_TYPES.ROOK]: '♖', [PIECE_TYPES.BISHOP]: '♗', [PIECE_TYPES.KNIGHT]: '♘', [PIECE_TYPES.PAWN]: '♙' },
-    [COLORS.BLACK]: { [PIECE_TYPES.KING]: '♚', [PIECE_TYPES.QUEEN]: '♛', [PIECE_TYPES.ROOK]: '♜', [PIECE_TYPES.BISHOP]: '♝', [PIECE_TYPES.KNIGHT]: '♞', [PIECE_TYPES.PAWN]: '♟' }
-};
-
-const INITIAL_SETUP = {
-    'a8': 'b_rook', 'b8': 'b_knight', 'c8': 'b_bishop', 'd8': 'b_queen', 'e8': 'b_king', 'f8': 'b_bishop', 'g8': 'b_knight', 'h8': 'b_rook',
-    'a7': 'b_pawn', 'b7': 'b_pawn', 'c7': 'b_pawn', 'd7': 'b_pawn', 'e7': 'b_pawn', 'f7': 'b_pawn', 'g7': 'b_pawn', 'h7': 'b_pawn',
-    'a2': 'w_pawn', 'b2': 'w_pawn', 'c2': 'w_pawn', 'd2': 'w_pawn', 'e2': 'w_pawn', 'f2': 'w_pawn', 'g2': 'w_pawn', 'h2': 'w_pawn',
-    'a1': 'w_rook', 'b1': 'w_knight', 'c1': 'w_bishop', 'd1': 'w_queen', 'e1': 'w_king', 'f1': 'w_bishop', 'g1': 'w_knight', 'h1': 'w_rook'
-};
+const ROWS = 8;
+const COLS = 4;
 
 // --- Game State ---
-let gameState = {
-    board: [],
-    currentPlayer: COLORS.WHITE,
-    selectedSquare: null,
-    lastMove: null,
-    isGameOver: false,
-    isAITurn: false,
-    availableMoves: []
-};
+let gameState = {};
 
+function getDefaultGameState() {
+    return {
+        board: [],
+        gameMode: null, // 'pvc' or 'pvp'
+        currentPlayer: null,
+        firstPlayerColor: null,
+        selectedSquare: null,
+        isGameOver: false,
+        isAITurn: false,
+        availableMoves: [],
+        capturedPieces: { [COLORS.RED]: [], [COLORS.BLACK]: [] },
+        moveHistory: [],
+    };
+}
+
+// --- DOM Elements ---
+const modeSelectionDiv = document.getElementById('mode-selection');
+const gameContainerDiv = document.getElementById('game-container');
+const chessboardContainer = document.getElementById('chessboard-container');
+const messageArea = document.getElementById('message-area');
+
+// --- Initialization ---
 function init() {
-    drawBoard();
+    document.getElementById('pvc-button').addEventListener('click', () => startGame('pvc'));
+    document.getElementById('pvp-button').addEventListener('click', () => startGame('pvp'));
+    document.getElementById('reset-button').addEventListener('click', resetGame);
+    document.getElementById('back-to-menu-button').addEventListener('click', showMenu);
+
+    chessboardContainer.addEventListener('click', handleSquareClick);
+    showMenu();
+}
+
+function showMenu() {
+    modeSelectionDiv.classList.remove('hidden');
+    gameContainerDiv.classList.add('hidden');
+}
+
+function startGame(mode) {
+    gameState.gameMode = mode;
+    modeSelectionDiv.classList.add('hidden');
+    gameContainerDiv.classList.remove('hidden');
     resetGame();
 }
 
 function resetGame() {
-    gameState = { board: initializeBoardState(), currentPlayer: COLORS.WHITE, selectedSquare: null, lastMove: null, isGameOver: false, isAITurn: false, availableMoves: [] };
-    renderBoard();
-    showMessage("輪到白方下棋");
+    gameState = { ...getDefaultGameState(), gameMode: gameState.gameMode };
+    initializeBoard();
+    render();
+    showMessage("遊戲開始！請先手翻棋。");
 }
 
-function initializeBoardState() {
-    const board = Array(8).fill(null).map(() => Array(8).fill(null));
-    for (const id in INITIAL_SETUP) {
-        const [row, col] = idToCoords(id);
-        const pieceStr = INITIAL_SETUP[id];
-        const [colorStr, typeStr] = pieceStr.split('_');
-        board[row][col] = { color: colorStr === 'w' ? COLORS.WHITE : COLORS.BLACK, type: PIECE_TYPES[typeStr.toUpperCase()] };
-    }
-    return board;
+function initializeBoard() {
+    let shuffledPieces = [...INITIAL_PIECE_POOL].sort(() => Math.random() - 0.5);
+    gameState.board = Array(ROWS).fill(null).map((_, r) =>
+        Array(COLS).fill(null).map((_, c) => {
+            const pieceName = shuffledPieces.pop();
+            return {
+                ...PIECES[pieceName],
+                id: `${r}-${c}`,
+                isHidden: true,
+            };
+        })
+    );
 }
 
-function drawBoard() {
-    const container = document.getElementById('chessboard-container');
-    container.innerHTML = '';
-    for (let row = 0; row < 8; row++) {
-        for (let col = 0; col < 8; col++) {
+// --- Rendering ---
+function render() {
+    chessboardContainer.innerHTML = '';
+    for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
             const square = document.createElement('div');
-            square.classList.add('square');
-            square.id = coordsToId([row, col]);
-            square.classList.add((row + col) % 2 === 0 ? 'light' : 'dark');
-            container.appendChild(square);
-        }
-    }
-    container.addEventListener('click', handleSquareClick);
-}
+            square.className = 'square';
+            square.dataset.r = r;
+            square.dataset.c = c;
 
-function renderBoard() {
-    const { board, selectedSquare, lastMove, availableMoves } = gameState;
-    document.querySelectorAll('.square').forEach(sq => {
-        sq.innerHTML = '';
-        sq.classList.remove('selected', 'last-move', 'available-move');
-    });
-    for (let row = 0; row < 8; row++) {
-        for (let col = 0; col < 8; col++) {
-            const piece = board[row][col];
-            if (piece) {
-                document.getElementById(coordsToId([row, col])).innerHTML = UNICODE_PIECES[piece.color][piece.type];
+            const pieceData = gameState.board[r][c];
+            if (pieceData) {
+                const pieceDiv = document.createElement('div');
+                pieceDiv.className = 'piece';
+                if (pieceData.isHidden) {
+                    pieceDiv.classList.add('hidden-piece');
+                } else {
+                    pieceDiv.textContent = pieceData.name;
+                    pieceDiv.classList.add(pieceData.color);
+                }
+                square.appendChild(pieceDiv);
             }
+            chessboardContainer.appendChild(square);
         }
     }
-    if (selectedSquare) document.getElementById(selectedSquare).classList.add('selected');
-    if (lastMove) {
-        document.getElementById(lastMove.from).classList.add('last-move');
-        document.getElementById(lastMove.to).classList.add('last-move');
+    // Highlight selected and available moves
+    if (gameState.selectedSquare) {
+        const { r, c } = gameState.selectedSquare;
+        const square = getSquareElement(r, c);
+        if(square) square.classList.add('selected');
     }
-    if (availableMoves.length > 0) {
-        availableMoves.forEach(moveId => {
-            document.getElementById(moveId).classList.add('available-move');
-        });
-    }
+    gameState.availableMoves.forEach(({r, c}) => {
+        const square = getSquareElement(r, c);
+        if(square) square.classList.add('available-move');
+    });
+
+    renderCapturedPieces();
 }
 
+function renderCapturedPieces() {
+    document.getElementById('red-captured').innerHTML = gameState.capturedPieces[COLORS.RED].map(p => `<div class="piece ${p.color}">${p.name}</div>`).join('');
+    document.getElementById('black-captured').innerHTML = gameState.capturedPieces[COLORS.BLACK].map(p => `<div class="piece ${p.color}">${p.name}</div>`).join('');
+}
+
+
+// --- Game Logic ---
 function handleSquareClick(e) {
-    if (gameState.isGameOver || gameState.isAITurn) {
-        showMessage("遊戲已結束。請點擊「重新開局」。", true);
-        return;
-    }
+    if (gameState.isGameOver || gameState.isAITurn) return;
+
     const square = e.target.closest('.square');
     if (!square) return;
-    const squareId = square.id;
-    const pieceOnSquare = getPieceAtId(squareId);
+
+    const r = parseInt(square.dataset.r);
+    const c = parseInt(square.dataset.c);
+    const piece = gameState.board[r][c];
 
     if (gameState.selectedSquare) {
-        if (squareId === gameState.selectedSquare) {
+        // A piece is already selected, try to move
+        const move = gameState.availableMoves.find(m => m.r === r && m.c === c);
+        if (move) {
+            movePiece(gameState.selectedSquare, { r, c });
+        } else {
+            // Deselect or select another piece
             gameState.selectedSquare = null;
             gameState.availableMoves = [];
-            showMessage("取消選取");
-        } else {
-            const fromId = gameState.selectedSquare;
-            const movingPiece = getPieceAtId(fromId);
-            const moveResult = isValidMove(movingPiece, fromId, squareId);
-
-            if (moveResult.isValid) {
-                movePiece(fromId, squareId);
-            } else {
-                const message = ERROR_MESSAGES[moveResult.reason] || "不合法的移動";
-                showMessage(message, true);
-                gameState.selectedSquare = null;
-                gameState.availableMoves = [];
+            // If clicking another of your own pieces, select it
+            if (piece && !piece.isHidden && piece.color === gameState.currentPlayer) {
+                selectPiece(r, c);
             }
         }
-    } else if (pieceOnSquare) {
-        if (pieceOnSquare.color === gameState.currentPlayer) {
-            gameState.selectedSquare = squareId;
-            gameState.availableMoves = getAvailableMoves(squareId);
-            showMessage("選取棋子，請選擇目標位置");
-        } else {
-            const playerText = gameState.currentPlayer === 'white' ? '白方' : '黑方';
-            showMessage(`現在是${playerText}的回合，不能移動對方的棋子。`, true);
+    } else if (piece) {
+        // No piece is selected, try to select or flip
+        if (piece.isHidden) {
+            flipPiece(r, c);
+        } else if (piece.color === gameState.currentPlayer) {
+            selectPiece(r, c);
         }
     }
-    renderBoard();
+    render();
 }
 
-async function movePiece(fromId, toId) {
-    const [fromRow, fromCol] = idToCoords(fromId);
-    const [toRow, toCol] = idToCoords(toId);
-    gameState.board[toRow][toCol] = gameState.board[fromRow][fromCol];
-    gameState.board[fromRow][fromCol] = null;
-    gameState.lastMove = { from: fromId, to: toId };
+function selectPiece(r, c) {
+    gameState.selectedSquare = { r, c };
+    gameState.availableMoves = getAvailableMoves(r, c);
+}
+
+function flipPiece(r, c) {
+    const piece = gameState.board[r][c];
+    if (!piece || !piece.isHidden) return;
+
+    piece.isHidden = false;
+
+    if (!gameState.firstPlayerColor) {
+        gameState.firstPlayerColor = piece.color;
+        gameState.currentPlayer = piece.color;
+    }
+
+    endTurn();
+}
+
+function movePiece(from, to) {
+    const movingPiece = gameState.board[from.r][from.c];
+    const targetPiece = gameState.board[to.r][to.c];
+
+    if (targetPiece) { // Capture
+        gameState.capturedPieces[targetPiece.color].push(targetPiece);
+    }
+
+    gameState.board[to.r][to.c] = movingPiece;
+    gameState.board[from.r][from.c] = null;
     gameState.selectedSquare = null;
     gameState.availableMoves = [];
 
+    endTurn();
+}
+
+function endTurn() {
     // Switch player
-    gameState.currentPlayer = gameState.currentPlayer === COLORS.WHITE ? COLORS.BLACK : COLORS.WHITE;
+    gameState.currentPlayer = (gameState.currentPlayer === COLORS.RED) ? COLORS.BLACK : COLORS.RED;
 
-    updateGameStatus();
-    renderBoard(); // Render immediately after human move
+    checkGameOver();
 
-    // If it's now AI's turn (Black) and game is not over
-    if (gameState.currentPlayer === COLORS.BLACK && !gameState.isGameOver) {
-        gameState.isAITurn = true;
-        const aiMove = await getAIMove(gameState);
-        gameState.isAITurn = false;
-        if (aiMove) {
+    if (!gameState.isGameOver) {
+        const playerText = gameState.currentPlayer === COLORS.RED ? "紅方" : "黑方";
+        showMessage(`輪到 ${playerText} 行動`);
+
+        if (gameState.gameMode === 'pvc' && gameState.currentPlayer !== gameState.firstPlayerColor) {
+            gameState.isAITurn = true;
+        }
+    }
+    render(); // Re-render after state changes
+
+    if (gameState.isAITurn && !gameState.isGameOver) {
+        triggerAIMove();
+    }
+}
+
+async function triggerAIMove() {
+    showMessage("電腦思考中...");
+    // Use a short delay to make the AI's move feel more natural
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    const aiMove = getAIMove(gameState); // This function is in ai.js
+    if (aiMove) {
+        if (aiMove.type === 'flip') {
+            flipPiece(aiMove.r, aiMove.c);
+        } else if (aiMove.type === 'move') {
             movePiece(aiMove.from, aiMove.to);
         }
     }
+    gameState.isAITurn = false;
+    render();
 }
 
-function updateGameStatus() {
-    const player = gameState.currentPlayer;
-    const opponent = player === COLORS.WHITE ? COLORS.BLACK : COLORS.WHITE;
-    const kingId = findKing(player);
-    if (!kingId) {
-        gameState.isGameOver = true;
-        showMessage("錯誤：找不到國王！", true);
+
+// --- Rule Logic ---
+function getAvailableMoves(r, c) {
+    const piece = gameState.board[r][c];
+    if (!piece || piece.isHidden) return [];
+
+    const moves = [];
+    const isCannon = piece.name === '炮' || piece.name === '包';
+
+    // Normal moves (adjacent)
+    const deltas = [{r: -1, c: 0}, {r: 1, c: 0}, {r: 0, c: -1}, {r: 0, c: 1}];
+    for (const delta of deltas) {
+        const newR = r + delta.r;
+        const newC = c + delta.c;
+        if (isValidSquare(newR, newC)) {
+            const target = gameState.board[newR][newC];
+            if (!target) { // Move to empty square
+                moves.push({ r: newR, c: newC });
+            } else if (canCapture(piece, target)) { // Capture
+                moves.push({ r: newR, c: newC });
+            }
+        }
+    }
+
+    // Cannon moves
+    if (isCannon) {
+        // Horizontal
+        for (let col = 0; col < COLS; col++) {
+            if(col !== c) addCannonMove(r, c, r, col, moves);
+        }
+        // Vertical
+        for (let row = 0; row < ROWS; row++) {
+            if(row !== r) addCannonMove(r, c, row, c, moves);
+        }
+    }
+
+    return moves;
+}
+
+function addCannonMove(r1, c1, r2, c2, moves) {
+    const piece = gameState.board[r1][c1];
+    const target = gameState.board[r2][c2];
+    if (!target || target.color === piece.color) return;
+
+    let jumpOverCount = 0;
+    if (r1 === r2) { // Horizontal
+        const start = Math.min(c1, c2) + 1;
+        const end = Math.max(c1, c2);
+        for (let i = start; i < end; i++) {
+            if (gameState.board[r1][i]) jumpOverCount++;
+        }
+    } else { // Vertical
+        const start = Math.min(r1, r2) + 1;
+        const end = Math.max(r1, r2);
+        for (let i = start; i < end; i++) {
+            if (gameState.board[i][c1]) jumpOverCount++;
+        }
+    }
+
+    if (jumpOverCount === 1) {
+        moves.push({ r: r2, c: c2 });
+    }
+}
+
+function canCapture(attacker, defender) {
+    if (attacker.color === defender.color || defender.isHidden) {
+        return false;
+    }
+    // 兵/卒 can eat 帥/將
+    if ((attacker.name === '兵' || attacker.name === '卒') && (defender.name === '帥' || defender.name === '將')) {
+        return true;
+    }
+    // 帥/將 can be eaten by 兵/卒, but cannot eat them
+    if ((attacker.name === '帥' || attacker.name === '將') && (defender.name === '兵' || defender.name === '卒')) {
+        return false;
+    }
+    // General rule: higher or equal rank captures lower rank
+    return attacker.rank >= defender.rank;
+}
+
+
+// --- Game Over Logic ---
+function checkGameOver() {
+    const redPieces = getPlayerPieces(COLORS.RED);
+    const blackPieces = getPlayerPieces(COLORS.BLACK);
+
+    if (redPieces.length === 0) {
+        endGame(COLORS.BLACK, "紅方已無棋子");
         return;
     }
-    const isInCheck = isSquareUnderAttack(kingId, opponent, gameState.board);
-    const hasMoves = hasAnyValidMoves(player);
-    if (!hasMoves) {
-        gameState.isGameOver = true;
-        if (isInCheck) {
-            const winnerText = getPlayerText(opponent);
-            showMessage(`將死！ ${winnerText}獲勝！`, true);
-        } else {
-            showMessage("逼和！遊戲平局。", true);
-        }
-    } else if (isInCheck) {
-        const playerText = getPlayerText(player);
-        showMessage(`輪到${playerText}下棋，國王已被將軍！`);
-    } else {
-        const playerText = getPlayerText(player);
-        showMessage(`輪到${playerText}下棋。`);
+    if (blackPieces.length === 0) {
+        endGame(COLORS.RED, "黑方已無棋子");
+        return;
+    }
+
+    const redHasMoves = hasAnyValidMoves(COLORS.RED);
+    const blackHasMoves = hasAnyValidMoves(COLORS.BLACK);
+
+    if (!redHasMoves && gameState.currentPlayer === COLORS.RED) {
+        endGame(COLORS.BLACK, "紅方已無棋可走");
+        return;
+    }
+    if (!blackHasMoves && gameState.currentPlayer === COLORS.BLACK) {
+        endGame(COLORS.RED, "黑方已無棋可走");
+        return;
     }
 }
 
-function hasAnyValidMoves(playerColor) {
-    for (let r = 0; r < 8; r++) {
-        for (let c = 0; c < 8; c++) {
+function hasAnyValidMoves(color) {
+    // Check for any possible flips
+    for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+            if (gameState.board[r][c] && gameState.board[r][c].isHidden) {
+                return true;
+            }
+        }
+    }
+    // Check for any possible moves
+    const pieces = getPlayerPieces(color);
+    for (const piece of pieces) {
+        if (getAvailableMoves(piece.r, piece.c).length > 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function endGame(winner, reason) {
+    gameState.isGameOver = true;
+    const winnerText = winner === COLORS.RED ? "紅方" : "黑方";
+    showMessage(`遊戲結束！${winnerText}獲勝！(${reason})`);
+}
+
+// --- Utility functions ---
+function getPlayerPieces(color) {
+    const pieces = [];
+    for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
             const piece = gameState.board[r][c];
-            if (piece && piece.color === playerColor) {
-                const fromId = coordsToId([r, c]);
-                for (let destR = 0; destR < 8; destR++) {
-                    for (let destC = 0; destC < 8; destC++) {
-                        const toId = coordsToId([destR, destC]);
-                        if (isValidMove(piece, fromId, toId).isValid) {
-                            return true;
-                        }
-                    }
-                }
+            if (piece && !piece.isHidden && piece.color === color) {
+                pieces.push({ r, c, ...piece });
             }
         }
     }
-    return false;
+    return pieces;
 }
 
-function getAvailableMoves(fromId) {
-    const availableMoves = [];
-    const piece = getPieceAtId(fromId);
-    if (!piece) return availableMoves;
-    for (let r = 0; r < 8; r++) {
-        for (let c = 0; c < 8; c++) {
-            const toId = coordsToId([r, c]);
-            if (isValidMove(piece, fromId, toId).isValid) {
-                availableMoves.push(toId);
-            }
-        }
-    }
-    return availableMoves;
+function isValidSquare(r, c) {
+    return r >= 0 && r < ROWS && c >= 0 && c < COLS;
 }
 
-function isValidMove(piece, fromId, toId) {
-    const canMoveResult = canPieceMove(piece, fromId, toId, gameState.board);
-    if (!canMoveResult.isValid) {
-        return canMoveResult;
-    }
-    const boardCopy = createBoardCopy(gameState.board);
-    const [fromRow, fromCol] = idToCoords(fromId);
-    const [toRow, toCol] = idToCoords(toId);
-    boardCopy[toRow][toCol] = boardCopy[fromRow][fromCol];
-    boardCopy[fromRow][fromCol] = null;
-    const kingSquareId = findKing(piece.color, boardCopy);
-    if (!kingSquareId) {
-        return { isValid: false, reason: 'INVALID_STATE_NO_KING' };
-    }
-    const opponentColor = piece.color === COLORS.WHITE ? COLORS.BLACK : COLORS.WHITE;
-    if (isSquareUnderAttack(kingSquareId, opponentColor, boardCopy)) {
-        return MOVE_VALIDATION_RESULTS.MOVE_EXPOSES_KING_TO_CHECK;
-    }
-    return MOVE_VALIDATION_RESULTS.VALID;
+function getSquareElement(r, c) {
+    return chessboardContainer.querySelector(`[data-r='${r}'][data-c='${c}']`);
 }
 
-function isSquareUnderAttack(squareId, attackerColor, board) {
-    for (let r = 0; r < 8; r++) {
-        for (let c = 0; c < 8; c++) {
-            const piece = board[r][c];
-            if (piece && piece.color === attackerColor) {
-                if (canPieceMove(piece, coordsToId([r, c]), squareId, board).isValid) {
-                    return true;
-                }
-            }
-        }
-    }
-    return false;
-}
-
-function isPathClear(fromId, toId, board) {
-    const [fromRow, fromCol] = idToCoords(fromId);
-    const [toRow, toCol] = idToCoords(toId);
-    const dRow = Math.sign(toRow - fromRow);
-    const dCol = Math.sign(toCol - fromCol);
-    let currentRow = fromRow + dRow;
-    let currentCol = fromCol + dCol;
-    while (currentRow !== toRow || currentCol !== toCol) {
-        if (board[currentRow][currentCol]) return MOVE_VALIDATION_RESULTS.PATH_BLOCKED;
-        currentRow += dRow;
-        currentCol += dCol;
-    }
-    return MOVE_VALIDATION_RESULTS.VALID;
-}
-
-function canPieceMove(piece, fromId, toId, board) {
-    if (!piece) return { isValid: false };
-    const [fromRow, fromCol] = idToCoords(fromId);
-    const [toRow, toCol] = idToCoords(toId);
-    const targetPiece = board[toRow][toCol];
-    if (targetPiece && targetPiece.color === piece.color) return { isValid: false };
-    const dRow = toRow - fromRow;
-    const dCol = toCol - fromCol;
-
-    switch (piece.type) {
-        case PIECE_TYPES.PAWN:
-            const forwardDir = piece.color === COLORS.WHITE ? -1 : 1;
-            const startRow = piece.color === COLORS.WHITE ? 6 : 1;
-            if (Math.abs(dCol) === 1 && dRow === forwardDir && targetPiece) return MOVE_VALIDATION_RESULTS.VALID;
-            if (targetPiece) return MOVE_VALIDATION_RESULTS.INVALID_PIECE_MOVE;
-            if (dCol === 0 && dRow === forwardDir) return MOVE_VALIDATION_RESULTS.VALID;
-            if (dCol === 0 && fromRow === startRow && dRow === 2 * forwardDir) return isPathClear(fromId, toId, board);
-            return MOVE_VALIDATION_RESULTS.INVALID_PIECE_MOVE;
-        case PIECE_TYPES.KNIGHT:
-            return (Math.abs(dRow) === 2 && Math.abs(dCol) === 1) || (Math.abs(dRow) === 1 && Math.abs(dCol) === 2) ? MOVE_VALIDATION_RESULTS.VALID : MOVE_VALIDATION_RESULTS.INVALID_PIECE_MOVE;
-        case PIECE_TYPES.ROOK:
-            return (dRow === 0 || dCol === 0) ? isPathClear(fromId, toId, board) : MOVE_VALIDATION_RESULTS.INVALID_PIECE_MOVE;
-        case PIECE_TYPES.BISHOP:
-            return Math.abs(dRow) === Math.abs(dCol) ? isPathClear(fromId, toId, board) : MOVE_VALIDATION_RESULTS.INVALID_PIECE_MOVE;
-        case PIECE_TYPES.QUEEN:
-            return ((dRow === 0 || dCol === 0) || (Math.abs(dRow) === Math.abs(dCol))) ? isPathClear(fromId, toId, board) : MOVE_VALIDATION_RESULTS.INVALID_PIECE_MOVE;
-        case PIECE_TYPES.KING:
-            return Math.abs(dRow) <= 1 && Math.abs(dCol) <= 1 ? MOVE_VALIDATION_RESULTS.VALID : MOVE_VALIDATION_RESULTS.INVALID_PIECE_MOVE;
-        default:
-            return { isValid: false };
-    }
-}
-
-function findKing(playerColor, board) {
-    const aBoard = board || gameState.board;
-    for (let r = 0; r < 8; r++) {
-        for (let c = 0; c < 8; c++) {
-            const p = aBoard[r][c];
-            if (p && p.type === PIECE_TYPES.KING && p.color === playerColor) {
-                return coordsToId([r, c]);
-            }
-        }
-    }
-    return '';
-}
-
-function idToCoords(id) {
-    const col = id.charCodeAt(0) - 'a'.charCodeAt(0);
-    const row = 8 - parseInt(id.substring(1), 10);
-    return [row, col];
-}
-
-function coordsToId([row, col]) {
-    const file = String.fromCharCode('a'.charCodeAt(0) + col);
-    const rank = 8 - row;
-    return `${file}${rank}`;
-}
-
-function createBoardCopy(board) {
-    return JSON.parse(JSON.stringify(board));
-}
-
-function getPieceAtId(id) {
-    const [row, col] = idToCoords(id);
-    return gameState.board[row][col];
-}
-
-function showMessage(text, isError = false) {
-    const messageArea = document.getElementById('message-area');
-    if (messageArea) {
-        messageArea.textContent = text;
-        messageArea.style.color = isError ? '#c0392b' : '#2c3e50';
-    }
-}
-
-function getPlayerText(playerColor) {
-    return playerColor === COLORS.WHITE ? '白方' : '黑方';
+function showMessage(text) {
+    messageArea.textContent = text;
 }
