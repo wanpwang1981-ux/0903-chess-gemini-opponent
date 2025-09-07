@@ -325,18 +325,6 @@ function canCapture(attacker, defender) {
 
 // --- Game Over Logic ---
 function checkGameOver() {
-    const redPieces = getPlayerPieces(COLORS.RED);
-    const blackPieces = getPlayerPieces(COLORS.BLACK);
-
-    if (redPieces.length === 0) {
-        endGame(COLORS.BLACK, "紅方已無棋子");
-        return;
-    }
-    if (blackPieces.length === 0) {
-        endGame(COLORS.RED, "黑方已無棋子");
-        return;
-    }
-
     const redHasMoves = hasAnyValidMoves(COLORS.RED);
     const blackHasMoves = hasAnyValidMoves(COLORS.BLACK);
 
