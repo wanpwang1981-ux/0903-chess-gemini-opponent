@@ -174,7 +174,9 @@ function selectPiece(r, c) {
     gameState.availableMoves = getAvailableMoves(r, c, gameState.board);
 }
 
-function flipPiece(r, c) {
+// --- Core Action Logic (Internal, no turn management) ---
+
+function _flipPiece(r, c) {
     const piece = gameState.board[r][c];
     if (!piece || !piece.isHidden) return;
 
@@ -184,11 +186,9 @@ function flipPiece(r, c) {
         gameState.firstPlayerColor = piece.color;
         gameState.currentPlayer = piece.color;
     }
-
-    endTurn();
 }
 
-function movePiece(from, to) {
+function _movePiece(from, to) {
     const movingPiece = gameState.board[from.r][from.c];
     const targetPiece = gameState.board[to.r][to.c];
 
@@ -200,7 +200,17 @@ function movePiece(from, to) {
     gameState.board[from.r][from.c] = null;
     gameState.selectedSquare = null;
     gameState.availableMoves = [];
+}
 
+// --- Player-facing Action Wrappers (with turn management) ---
+
+function flipPiece(r, c) {
+    _flipPiece(r, c);
+    endTurn();
+}
+
+function movePiece(from, to) {
+    _movePiece(from, to);
     endTurn();
 }
 
@@ -227,19 +237,25 @@ function endTurn() {
 
 async function triggerAIMove() {
     showMessage("電腦思考中...");
-    // Use a short delay to make the AI's move feel more natural
     await new Promise(resolve => setTimeout(resolve, 500));
 
-    const aiMove = getAIMove(gameState); // This function is in ai.js
+    const aiMove = getAIMove(gameState);
     if (aiMove) {
         if (aiMove.type === 'flip') {
-            flipPiece(aiMove.r, aiMove.c);
+            _flipPiece(aiMove.r, aiMove.c);
         } else if (aiMove.type === 'move') {
-            movePiece(aiMove.from, aiMove.to);
+            _movePiece(aiMove.from, aiMove.to);
         }
+        // After the AI action is done, the AI's turn ends.
+        endTurn();
+    } else {
+        // If AI has no moves, it's game over, but endTurn will handle it.
+        // This case should be caught by checkGameOver, but as a safeguard:
+        endTurn();
     }
+
     gameState.isAITurn = false;
-    render();
+    // The render() call is inside endTurn, so we don't need another one here.
 }
 
 
