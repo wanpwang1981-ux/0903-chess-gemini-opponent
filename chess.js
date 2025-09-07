@@ -246,16 +246,14 @@ async function triggerAIMove() {
         } else if (aiMove.type === 'move') {
             _movePiece(aiMove.from, aiMove.to);
         }
-        // After the AI action is done, the AI's turn ends.
-        endTurn();
-    } else {
-        // If AI has no moves, it's game over, but endTurn will handle it.
-        // This case should be caught by checkGameOver, but as a safeguard:
-        endTurn();
     }
 
+    // AI has made its move (or has no moves). Its turn is over.
+    // Set the flag to false BEFORE calling endTurn to prevent re-entry.
     gameState.isAITurn = false;
-    // The render() call is inside endTurn, so we don't need another one here.
+
+    // Now, formally end the turn to pass control to the player.
+    endTurn();
 }
 
 

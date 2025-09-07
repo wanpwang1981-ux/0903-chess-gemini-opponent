@@ -27,7 +27,7 @@ function getAIMove(gameState) {
         }
     }
 
-    // 2. If there are no moves, return null (should be handled by checkGameOver, but as a safeguard)
+    // 2. If there are no moves, return null
     if (allPossibleMoves.length === 0) {
         return null;
     }
@@ -53,5 +53,3 @@ function getAIMove(gameState) {
     // Otherwise, return the previously selected random move
     return randomMove;
 }
-
-// No more duplicated helper functions here. They are all in chess.js.
